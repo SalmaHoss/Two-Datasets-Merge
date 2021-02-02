@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-import glob 
+import glob
 import argparse
 import numpy as np
 import random
@@ -8,6 +8,7 @@ import soundfile as sf
 from enum import Enum
 from tqdm import tqdm
 from scipy.io import wavfile
+
 
 class EncodingType(Enum):
     def __new__(cls, *args, **kwds):
@@ -44,51 +45,55 @@ class EncodingType(Enum):
 
 
 def get_args():
-    parser = argparse.ArgumentParser() #place of the file to be run
-    parser.add_argument("--clean_folder", type=str, required=True) #clean file => clean folder
-    parser.add_argument("--noise_folder", type=str, required=True) #noise file => noise folder
-    parser.add_argument("--output_mixed_file", type=str, default="", required=True) #mixed file
+    parser = argparse.ArgumentParser()  # place of the file to be run
+    parser.add_argument("--clean_folder", type=str, required=True)  # clean file => clean folder
+    parser.add_argument("--noise_folder", type=str, required=True)  # noise file => noise folder
+    parser.add_argument("--output_mixed_file", type=str, default="", required=True)  # mixed file
     parser.add_argument("--output_clean_file", type=str, default="")
     parser.add_argument("--output_noise_file", type=str, default="")
-    parser.add_argument("--snr", type=float, default="", required=True) #value
+    parser.add_argument("--snr", type=float, default="", required=True)  # value
     args = parser.parse_args()
     return args
     ##FROM ToyAdmos => Read From given folder##
 
+
 def wavread(fn):
     fs, data = wavfile.read(fn)
-    data     = (data.astype(np.float32) / 2**(15))
+    data = (data.astype(np.float32) / 2 ** (15))
     return data, fs
-    
+
     ##Call it with clean folder given and noise##
+
+
 def wav_read_all(wav_dir):
-    path, dirs, files = next(os.walk(wav_dir))# get them
-    file_count = len(files)                   #number of files in dir
-    #print("Here " + wav_dir,file_count)
+    path, dirs, files = next(os.walk(wav_dir))  # get them
+    file_count = len(files)  # number of files in dir
+    # print("Here " + wav_dir,file_count)
     wav_file_set = []
     Num_wav = 0
-    #for i in range(file_count):
-    wav_file_set =  os.listdir(wav_dir)         #put them in the set
-    Num_wav   = len( wav_file_set )
-    #print("Final "+wav_dir,Num_wav)
+    # for i in range(file_count):
+    wav_file_set = os.listdir(wav_dir)  # put them in the set
+    Num_wav = len(wav_file_set)
+    # print("Final "+wav_dir,Num_wav)
     # till here it isnot the write file format
     S_all = []
     fn_all = []
-    signals = []   #must be 1 element
+    signals = []  # must be 1 element
 
     for item in wav_file_set:
-       fn      = str(item)
-       print(fn)
-       data,org_fs =  wavread(wav_dir+'/'+fn)
-       signals.append(data)
-       fn_all.append(fn)
+        fn = str(item)
+        print(fn)
+        data, org_fs = wavread(wav_dir + '/' + fn)
+        signals.append(data)
+        fn_all.append(wav_dir + '/' + fn)
     signal = signals[0]
-    #if(org_fs != target_fs):
+    # if(org_fs != target_fs):
     #        signal = librosa.core.resample( signal, org_fs, target_fs )
-    #fn = fn[len(wav_dir):].replace( ch_num[-1], 'chAll' )
-    S_all.append(signal) 
-    #return Num_wav,wav_file_set
-    return Num_wav,S_all,fn_all
+    # fn = fn[len(wav_dir):].replace( ch_num[-1], 'chAll' )
+    S_all.append(signal)
+    # return Num_wav,wav_file_set
+    return Num_wav, S_all, fn_all
+
 
 #######################################################
 
@@ -111,11 +116,11 @@ if __name__ == "__main__":
     args = get_args()
     clean_folder = args.clean_folder
     noise_folder = args.noise_folder
-    
-    Num_clean_files,signal_clean_files,clean_files = wav_read_all(clean_folder)
-    Num_noise_files,signal_noise_files,noise_files = wav_read_all(noise_folder)
-    print("Number of files in clean ",Num_clean_files)
-    iter = min(Num_noise_files,Num_clean_files)  # not good way but for trying
+
+    Num_clean_files, signal_clean_files, clean_files = wav_read_all(clean_folder)
+    Num_noise_files, signal_noise_files, noise_files = wav_read_all(noise_folder)
+    print("Number of files in clean ", Num_clean_files)
+    iter = min(Num_noise_files, Num_clean_files)  # not good way but for trying
 for i in range(iter):
     metadata = sf.info(clean_files[i])
     for item in EncodingType:
@@ -128,7 +133,7 @@ for i in range(iter):
     clean_rms = cal_rms(clean_amp)
 
     start = random.randint(0, len(noise_amp) - len(clean_amp))
-    divided_noise_amp = noise_amp[start : start + len(clean_amp)]
+    divided_noise_amp = noise_amp[start: start + len(clean_amp)]
     noise_rms = cal_rms(divided_noise_amp)
 
     snr = args.snr
@@ -147,7 +152,8 @@ for i in range(iter):
             reduction_rate = min_limit / mixed_amp.min(axis=0)
         mixed_amp = mixed_amp * (reduction_rate)
         clean_amp = clean_amp * (reduction_rate)
-    output_file_name = args.output_mixed_file+i
+    output_file_name = args.output_mixed_file + '_' + str(i)
+    print("Name of the two mixed files ", clean_files[i], noise_files[i])
     save_waveform(
         output_file_name, mixed_amp, clean_samplerate, encoding_type.subtype
     )
